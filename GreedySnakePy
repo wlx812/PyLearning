@@ -1,0 +1,149 @@
+class Point():
+    row = 0
+    col = 0
+    def __init__(self, row, col):
+        self.row = row
+        self.col = col
+
+    def copy(self):
+        return Point(self.row,self.col)
+
+import pygame
+import random
+
+# 初始化
+pygame.init()
+W = 800  # 屏幕的宽
+H = 600  # 屏幕的高
+
+ROW = 30  # 几行
+COL = 40  # 几列  每个格有多大
+
+size = (W, H)
+window = pygame.display.set_mode(size)
+pygame.display.set_caption('贪吃蛇')
+
+bg_color = (255, 255, 255)  # 背景颜色
+snake_color = (150, 150, 150)  # 蛇身颜色
+
+head = Point(int(ROW/2), int(COL/2))  # 蛇头
+head_color = (0, 128, 128)
+
+snakes = [
+    Point(head.row, head.col + 1),
+    Point(head.row, head.col + 2)
+]
+
+
+# 生成食物
+def get_food():
+    while True:
+        pos = Point(random.randint(0, ROW - 1), random.randint(0, COL - 1))
+        # 是否跟蛇碰上
+        is_col = False
+        if head.row == pos.row and head.col == pos.col:
+            is_col = True
+        for snake in snakes:
+            if snake.row == pos.row and snake.col == pos.col:
+                is_col = True
+                break
+        if not is_col:
+            break
+    return pos
+
+# 定义坐标
+food = get_food()
+food_color = (255, 255, 0)
+
+
+direct = 'left'  # 蛇移动方向  left, right, up, down
+
+def rect(point, color):
+    cell_width = W / COL  # 格子的宽度
+    cell_height = H / ROW # 格子的高度
+
+    left = point.col * cell_width
+    top = point.row * cell_height
+    pygame.draw.rect(window,color,(left,top,cell_width,cell_height))
+
+
+# 游戏循环
+quit = True
+clock = pygame.time.Clock()
+
+# 设置帧频，根据游戏的进程逐渐变快
+frequency = 3
+
+while quit:
+    # 处理事件
+    events = pygame.event.get()
+    for event in events:
+        if event.type == pygame.QUIT:
+            quit = False
+        elif event.type == pygame.KEYDOWN:  # 按键  上下左右  对应键值可以通过print(event)打出来
+            if event.key == 273 or event.key == 119:
+                if direct == 'left' or direct == 'right':
+                    direct = 'up'
+            elif event.key == 274 or event.key == 115:
+                if direct == 'left' or direct == 'right':
+                    direct = 'down'
+            elif event.key == 276 or event.key == 97:
+                if direct == 'up' or direct == 'down':
+                    direct = 'left'
+            elif event.key == 275 or event.key == 100:
+                if direct == 'up' or direct == 'down':
+                    direct = 'right'
+
+    # 做自己的事
+
+    # 吃东西
+    eat = head.row == food.row and head.col == food.col
+
+    if eat:
+        food = get_food()
+        frequency += 1
+    # 处理身子
+    # 1、把原来的头插入到snakes的头上
+    snakes.insert(0,head.copy())
+    # 2、把snakes的最后一个格子删掉
+    if not eat:
+        snakes.pop()
+    # 移动
+    if direct == 'left':
+        head.col -= 1
+    elif direct == 'right':
+        head.col += 1
+    elif direct == 'up':
+        head.row -= 1
+    else:
+        head.row += 1
+
+    # 检测
+    dead = False
+    # 1、撞墙
+    if head.col < 0 or head.row <0 or head.col >= COL or head.row >= ROW:
+        dead = True
+    # 2、撞自己
+    for snake in snakes:
+        if head.col == snake.col and head.row == snake.row:
+            dead = True
+            break
+    if dead:
+        print("游戏结束")
+        quit = False
+    # 渲染--画出来
+    # 屏幕背景颜色绘制
+    pygame.draw.rect(window,bg_color,(0,0,W,H))
+
+    # 画蛇头
+    for snake in snakes:
+        rect(snake,snake_color)
+    rect(head, head_color)
+
+    # 画食物
+    rect(food, food_color)
+
+    pygame.display.flip()    #  更新整个待显示的Surface 对象到屏幕上
+
+    # 设置帧频
+    clock.tick(frequency) # sleep(1000/60)
